@@ -1,0 +1,1409 @@
+ZFilter main documentation for version 2.4 - Jan 26, 1997
+
+Contents:
+
+1. What is ZFilter?
+   1.1. Why should I use it?
+   1.2. Who is this document intended for?
+2. How do I implement it?
+3. How do I get it to do what I want it to do?
+   3.1. Rules
+   3.2. Expressions
+   3.3. Variables
+   3.4. Operators
+   3.5. Actions
+   3.6. Examples
+4. How do I write Form letters?
+5. How do I handle lists?
+6. How do I change the default settings?
+7. How can I change the default files?  How can I see summaries? logs? etc.. 
+8. Miscellaneous
+9. Examples
+10. How does ZFilter compare to other filter programs?
+11. Modification history
+
+--------------------------------------------------------------------------
+1. What is Zfilter?
+
+ZFilter is an e-mail filtering program.  Like a real filter (say, for 
+coffee), ZFilter can strain out some unwanted or unpleasant e-mail, or
+working in reverse, can allow you to only receive mail from certain other
+people.
+
+If that was all it did, it wouldn't be especially unique, or anything
+for me to really brag about.  Fortunately it isn't.  ZFilter is capable
+of taking a wide range of actions to a much wider range of situations.
+ZFilter can run other programs, send form responses, forward mail to
+other people and maintain a variable set and counters that let you 
+easily keep track of how much mail you have received, and from whom.
+ZFilter can print summaries, showing you how often each action you told
+it to take was used and how much mail you have received from each e-mail
+address.  It can even detect chain letters in a lot of cases (about   
+95% of the time) and let you delete them automatically, or send a prepared
+nasty-gram back to whoever sent it to you.
+
+ZFilter is designed to make the old "/bin/filter" that comes with ELM
+obsolete.  It (hopefully) provides a superset of the commands available
+to the old filter, and is more flexible and versatile in different
+situations.
+
+ZFilter can be found wherever your favorite archives of 
+comp.sources.unix are stored. It is occasionally posted to 
+comp.lang.perl.misc and can be found on CPAN, and from my home page
+at http://www.guam.net/home/viper/files.html
+
+Support from the author can be obtained by e-mailing  
+ viper@kuentos.guam.net
+Ideas and suggestions are always welcome.
+
+Flames are welcome, just put the word "FLAME" in the subject line.  :)
+
+1.1 Why should I use it?
+
+Do you get junk mail?  Is someone harrasing you and you don't want 
+their mail?  Want saved copies of mail from certain people?  Want all
+your mail forwarded to another site, and a message sent to people who
+use your old address to use the new one?  Wish you could auto-acknowledge
+mail from people who worry too much?  Have any use for a primitive
+Listserver?  Wanna look cool to all your computer-techie friends?  Would
+you like to keep logs of who writes to you the most and how much mail 
+you receive every day?  Hate chain letters?  Would you like to send
+personalized mail to groups of people who write to you and look sincere
+and understanding before you've even read it?  Enjoy looking at other
+people's source code?
+
+ZFilter is capable of responding to nearly any situation you might run
+into with mail, especially if you use external programs to cover wierd
+specific ones.
+
+One copy of ZFilter can serve a system.  All users may configure it
+differently for their needs.  A restricted filter (rzfilter) is available
+for systems that would like to provide a filter to their users, but don't
+want users to be able to run other programs (through pipes).  It is more
+secure and limits what people can do to get around your internal security
+if you're using rksh or other restricted-shell.  It is available upon 
+request from the author.
+
+1.2. Who is this document intended for?
+
+Although I wanted to include lots of technical information about ZFilter
+for the variety of UNIX-savvy dudes out there, I realized that one of the
+problems with the old filter and why it wasn't as widely used as it could
+have been was that the average user with shell access to an ISP couldn't
+figure out how to set it up or get it working from the man page or some 
+of the other help files for it.  This document _tries_ to explain both
+the technical stuff that experienced and froody UNIX dudes want to know, 
+but it also tries really hard to make it so that inexperienced UNIX newbies
+can figure out how to get it going themselves.  In doing so, I hope rather
+than be annoyed at having to wade through stuff they already know, the
+coolest of the cool Unix dudes will bear with me and skim to the things
+they _do_ want to know.
+
+What should you read?
+Newbies: Read _everything_.  I'm not kidding.  I'm not going to answer 
+         any questions if the answer is plain-as-day in this doc.  If
+         you don't understand something, it probably isn't important 
+	 right now.
+Unix Hacks: Skim "variables" to see how ZFilter extracts variables from
+	 message headers.  Look at the extra variables ZFilter gets from
+	 your environment and the "ones you shouldn't change".
+	 You should be familiar with most of the operators, but I've
+	 introduced "?" and "#" as regex pattern-matches.  Go see the
+	 end of the operators section and the Misc. section.
+    	 You'll want to read all the commands available, you may want to
+	 glance at the examples of commands to see ZFilter syntax in 
+         action.  Other than that, you may want to skim the rest at your
+	 leisure.  Zfilter should understand the old-style filter rules
+         files, but you may find that some things you did with the old
+         filter can be done with fewer lines or more efficiently with   
+         ZFilter's new commands and abilities.
+
+--------------------------------------------------------------------------
+2. How do I implement it?
+
+STEP 0: If you don't have PERL, go get it and install it.  Shame on you!
+
+STEP 1: Stick the perl source "zfilter" somewhere and make it 
+	executable. This example is assuming you're putting it 
+	in "/local/bin".
+
+Non-Unix techies: Get a Unix-techies' supervision before installing PERL
+	on their system.  They may not want it.  If they don't, get
+	another ISP.
+Unix techies: ZFilter assumes you put Perl in /usr/bin .  If you didn't
+  	change the first line of ZFilter to be where perl is.  ZFilter
+	should be secure to run setUID but I don't know why you'd want to.
+
+STEP 2: Run ZFilter once with "-C" to configure it to your default 
+        settings.  Type "zfilter -C" (capital 'C').  When ZFilter
+        asks you where it is located, tell it where you put it (ie
+        if you put it in "/local/bin", tell it that.  You may accept
+        the default selection (what is inside the []s) by pressing 
+        Enter.  The "local host" is optional (discussed later).
+        
+        NOTE TO TECHIES: ZFilter will replace your ".forward" file with
+        a new one, if one exists.  You can modify it later if you wish, 
+        just leave your login name in the invocation line.
+
+MORE IMPORTANT NOTE:  If ZFilter warns that it can't create the ".forward"
+ file, you'll have to do it yourself.  Go to your home directory (type
+ "cd <ENTER>" at the prompt) then open your editor to create the file      
+ named ".forward" (type "pico .forward <ENTER>" for most non-techies).
+ Now put this line as the first, and only line in the file:
+  "| /local/bin/zfilter LOGIN_NAME"
+ Include the quotes.  If Zfilter is not in "/local/bin", change that part
+ of the line to reflect it's actual location.  Replace "LOGIN_NAME" with
+ your login name.  This is how it would look for a user named "bob".
+  "| /local/bin/zfilter bob"
+ Don't forget the quotes.  For the rest of the README file, the quotes
+ are used only to separate text from context and should NOT be typed 
+ unless otherwise stated.
+
+--------------------------------------------------------------------------
+3. How do I get it to do what I want it to do?
+
+ZFilter takes all it's cues from a "rules" file.  The rules file is made
+up of statements that follow this general format:
+
+If (something is true) some action to take.
+
+3.1 Rules
+
+Each of those statements is called a "Rule".  There are two acceptable
+formats for each rule-
+
+if (*some expression*) *some action*
+	and
+if *some expression* then *some action*
+
+One requires parentheses, one requires the word "then".   Choose whatever
+form most appeals to you, but this author prefers the parenthesized form.
+If you use the second format, if you have the word "then" somewhere
+in the expression or as an action, the statement may not work correctly.
+With the parenthesized format, the spaces are optional between parts, with
+the second, the spaces are required.  The second format is really for
+programmers who came from a BASIC environment and can't handle the real 
+world of C++ and Unix.
+
+3.2. Expressions
+
+An expression is (for our purposes) the statement that is being evaluated
+for "truthfulness".  It represents the situation that you want in order
+for the actions you want to be performed.  For example, in the real-life
+statement 
+
+"If it's not raining and the car will start, go to the store."
+
+The "expression" part is "... not raining and the car will start ..." and
+of course "... go to the store." is the "action" part of the statement 
+because it represents what you want to do if the expresion is true.
+
+An expression can be in several parts.  A multi-part expression would 
+look like this:
+   sub-expression AND/OR sub-expression AND/OR sub-expression .....
+
+The real world example above has two sub-expressions: "not raining" and
+"the car will start".  It might have three or more, like this:
+
+"If it's not raining and the car will start or you can take a bus, go to
+ the store."
+
+With ZFilter, you separate the sub-expressions with "|" and "&".  (or
+"||" and "&&" if you come from a programming background and it makes you
+feel better.  ZFilter doesn't do bitwise comparisons, so "|" and "||" 
+mean the same thing, ditto for "&" and "&&").  "|" means "OR" and "&"
+means (you guessed it!) "AND".   SO... if you want to tell ZFilter the 
+same expression above (assuming it knows english), you would tell it:
+
+if ( ! raining & car will start | can take bus ) go to the store
+
+The "!" means "not", and will be covered later on.
+
+Each actual expression can follow one of two formats:
+
+   [ ! ] VARIABLE RELATIONSHIP VALUE
+or 
+   [ ! ] VARIABLE
+and two special cases:
+   [ ! ] always
+   [ ! ] never
+
+DON'T use the square brackets.  They are there to remind you that the
+"!" is optional.  You may place an exclamation point at the beginning
+of an expression to reverse the sense of it.  SO...
+  ! bob = 3
+which normally means "When the variable 'bob' is equal to 3", with the
+exclamation mark means "Whenever the variable 'bob' is NOT 3".
+and the statement
+  ! foo
+which means (without the exclamation mark) "When the variable 'foo' 
+exists", now means "When the variable 'foo' does NOT exist."
+"always" is always true.  ! always means "never", not "sometimes".
+"never" is never true.  ! never means "always".
+
+ADVANCED Ruleism:
+   Without parentheses, an expression evaluates like this:
+
+if (((sub-expression1) & sub-expression2) & sub-expression3) then...
+essentially, sub-expressions that come later or last are more "important"
+than ones that come before.  If you have trouble with the idea of using
+parentheses to make yourself clear, just put the most important parts of
+your rules last and you should do OK.
+
+SO... Our statement before,
+if ( ! raining & car will start | can take bus ) go to the store
+
+works out like this, assuming it's raining and the car won't start, but
+the bus is available:
+
+! raining ... - is False.  It is raining.
+... car will start ... - Also false.  It won't.
+... bus is available - True!  The bus is available.
+
+End result: We go to the store!  Why?  Look at it this way:
+((( false ) & false ) | true)  representing the three sub-expressions.
+((   false & false  ) | true)  -not raining and car will start (both false)
+((      false       ) | true)  -neither is true, so that sub-expression
+				is false. 
+(       false | true        )  -combination of previous two and "bus 
+			        is available"
+   	    True.	       -End result is true.
+
+If you need more help, the "&" and "|" parts work this way:
+  something & something - is true ONLY if both "somethings" are true.
+  something | something - is true if either or both somethings are true.
+
+But suppose we meant to say "don't go to the store if it is raining, if it
+ isn't raining, go if either the car will start or the bus is available."
+
+We can do that one of two ways.  First, without parentheses:
+
+if ( car will start | bus is available & !raining ) go to store.
+
+Will be true if you can get one vehicle to work and it is not raining.
+With parentheses we can use the old expression, just changed a bit:
+
+if ( !raining & (car will start | bus is available) ) go to store.
+
+If you honestly don't know how to use parentheses to separate parts of
+a statement you want evaluated first, then I'm sorry, but I don't have 
+time or space to explain them to you.  Consult a high-school kid who's
+at least in trig or so.  They should have it down by now.  
+
+3.3. Variables
+
+A variable (for our purposes) is a name attached to an unknown value.
+The name can be decided arbitrarily, but usually is intended to help
+the programmer or reader remember why they are using it.  For example
+we can create a variable called "bob" and someone else can assign it
+the value "3".  Later, we can test to see what it is with a statement
+like this:
+
+if ( bob = 3 ) do this...
+if ( bob = 2 ) do this...
+if ( bob < 2 ) do this...
+if ( bob > 3 ) do this...
+
+So we don't really know what bob is, but we can do different things 
+depending on what it is.
+
+The variables used in ZFilter don't usually have just numbers in them.
+"sender" is usually a variable that is the e-mail address of the person
+who just sent you a letter (like loser@aol.com).  "date" usually has the
+date the letter was sent to you (like Tue 13 Jul 1996). 
+
+ZFilter reads it's variables from the header of the message.  For a 
+complete list of all the stuff that should be in a message header, go
+read the RFC's.  If you look at a header, you'll see lots of lines that
+look like this:
+
+From: Jane Schmoe (jschmoe@bong.com)
+Date: Tue 18 Jul 1996 12:22:03 +1 GMT
+
+and ZFilter will take everything _before_ the ":" and call it the
+variable name, and everything after the ":" and call it the variable's
+value.  The above two lines would create two variables- 
+ 'from' would contain the value 'Jane Schmoe....' and 'date' would
+ contain 'Tue 18 ... GMT' 
+
+In general, you're likely to have these variables from every e-mail 
+message:
+
+from		- who the sender would like you to think the message came 
+         	  from.
+to		- hopefully your e-mail address, but can be the address
+		  originally used before a cc: or Bcc:
+subject		- what the sender thought the message was about
+date		- (special case) usually the date the message was sent.
+
+Some messages will have extra variables like these:
+
+sender		- like 'from'
+reply-to	- where to direct replies to
+precedence	- the class of message (like 'bulk' for large mailings)
+errors-to	- where to report errors
+x-mailer	- sometimes the program used to send the message
+
+In addition, ZFilter tries to be helpful by giving you these:
+
+date		- Normally, a full date: "Tue 18 Jul 1996 11:23:02 +1 GMT"
+		  indicating date, time and relation to GMT.  ZFilter
+ 		  breaks the date down into two variables:
+		  'date' (Tue 18 Jul 1996) and 'time' (11:23:02).
+time		- see 'date'
+when		- The original, unbroken date
+name		- The personal name of the sender (if defined)
+email		- The sender's preferred e-mail address
+content		- The entire contents of the letter
+real_sender	- ZFilter's "best guess" as to where the message came from.
+sender		- Equivalent to 'real_sender' when the variable 'sender'
+		  is not explicitly stated in the message.
+lines		- The number of lines in the letter
+signature	- your ".signature" file.
+chain		- A special one, Zfilter tries to guess if the incoming
+		  message might be a chain letter.  It counts the number
+		  of times it appears to have been forwarded, and if
+		  it has been forwarded more than a user-defined number
+		  of times, it sets the "chain" variable.  Otherwise the
+		  variable doesn't exist.
+		  See the Zfilter Setup part of the manual for more info
+		  on setting the threshold for chain letter alarms.
+
+And there are a few internal ones that you probably shouldn't change:
+
+inbox		- Where the mailer thinks your in-box is.
+base_dir	- A "reference point" for all your files.
+log_file	- The file ZFilter writes it's logs to.
+mail_subj	- The subject ZFilter uses when sending mail.
+fwd_mail_subj	- The subject ZFilter uses when forwarding mail.
+
+You may define your own variables using the 'set' command for a variable
+that doesn't exist.  (using set on a variable that _does_ exist will change
+the value of it to whatever you set it to.)
+
+All these variables are 'temporary' variables - that is, they change every
+time a letter comes in.  Even variables created with 'set' are temporary,
+and are reset every letter.  ZFilter also supports permanent variables 
+that don't change or lose their values between letters.  These are ideal
+for counters to count the number of messages that meet criteria and 
+referring to them in form letters (ie "This is your 10th letter to me...")
+You can create permanent variables with 'create', 'pinc' and 'pdec'.  In
+addition, there are a number of permanent variables that are kept by ZFilter:
+sec, min, hour, day, mon, year.  Representing the number of messages
+received as of the current second, minute, hour, day, month and year 
+respectively.  To perform xxxx action for the first message of the year,
+you can say:
+ if ( year = 1 ) xxxx
+
+3.4. Operators
+
+Operators test for a relationship between a variable and a value.  
+This is an expression straight out of algebra 101:
+  x > 5
+there you're asking whether x is greater than 5.  If you didn't know that
+you probably shouldn't be reading this.  Go back to high school.  In 
+that expression, though, the ">" is the operator.
+ZFilter supports the standard math operators for testing values:
+ =   (equal to)		
+ <   (less than)		
+ >   (greater than)
+ <=  (less than or equal to)		
+ >=  (greater than or equal to)
+as well as:
+ !=  (not equal to)
+and the two word-search functions:
+ ?   (case insensitive search)
+ #   (case sensitive search)
+
+The last two may need some explanation.  An example should suffice:
+ from ? "bozoland"
+means "is the word 'bozoland' found anywhere in the variable 'from'?  This
+would be true if from was "bingobob@bozoland.com" or "BOZOland@foo.com".
+ from # "bozoland"
+would only work if "bozoland" (all in lowercase letters) was in the 'from'.
+
+Now we can look at expressions again.  An expression has one of two forms:
+
+ (!) variable
+and
+ (!) variable relationship value
+
+It's "value" that we need to spend a little bit of time on.
+Value can be one of three things.  Text, a number, or another variable.
+This is how ZFilter differentiates them all:
+
+If it's "text" (like when you're using ? or # to search for something in
+ a text-variable, or when you want to see if a text-variable is or isn't
+ a certain word or phrase) the text needs to be _quoted_.  That is, it
+ needs to have quotes (") around it.  For example, if I want to see if
+ the phrase "have a nice day" appears anywhere in the letter I'm looking 
+ at, I would use:
+
+if( content ? "have a nice day" ) do_some_action
+
+It MUST have quotes.  Trust me.  
+If the "value" part is a number, just type it in.  Don't use quotes unless
+you want it treated as text.  That's usually a bad idea.  So, to see if
+the message has more than 50 lines, you would use:
+
+if( lines > 50 ) do_some_action
+
+Lastly, if the value is another variable, type it in without quotes again.
+So, if you want to see if the variable "lines" is smaller than the variable
+"words", (assuming there is a variable called "words"), you would use:
+
+if( lines < words ) do_some_action
+
+Or to see if the text in the "from" variable is contained anywhere else in
+the message body, you could use:
+
+if( content ? from ) do_some_action
+
+I think figuring this part out will probably be the only tricky part for
+new Unix users.  Pros should get this one in no time.  ;)
+
+
+3.5. Actions
+
+Actions are evaluated when the expression has been determined to be true.
+So, for the statement
+
+if ( from ? "bozoland" ) canned bozoland_acknowledgement
+
+if the expression "from ? bozoland" turns out to be true for the message
+currently being evaluated, (that is, if the message you just received
+had the word "bozoland" somewhere in the from field) then the action
+"canned bozoland_acknowledgement" would be taken.
+
+Multiple actions on the same line are possible, but must be separated
+by semi-colons (;).  Actions may also be placed on the next lines before
+the next "if" statement.  Therefore, these are all different ways to
+do the same set of actions:
+
+1. 
+
+if ( from ? "bozoland" ) canned ack; forward jimbob@bozoland.org; stop
+
+2. 
+
+if ( from ? "bozoland" ) canned ack
+forward jimbob@bozoland.org
+stop
+
+3. 
+
+if ( from ? "bozoland" ) canned ack
+forward jimbob@bozoland.org; stop
+
+And so on...
+
+That said, here are a list of all the actions and how to use them.
+
+ADDHEADER 
+  Adds the variable and value to the header of the message you have
+ just received.  This can be used prior to forwarding or saving.
+ It is not reccomended that you use Addheader for common variables 
+ like Sender or From...  It acts as it's name suggests: it _Adds_
+ the header line.  If there was a prior variable with the same name,
+ now you will have two.  Use Setheader instead
+ Usage: addheader variable value
+ Example: addheader X-Came-From Bob's House O' Email
+
+ADDLIST
+  Adds the sender of the message to the given list.
+ Read the section on lists for more info.  Addresses can be removed
+ from the command line, or with the action "remlist"
+ Usage: addlist listname
+ Example: addlist boating
+
+BOUNCE
+  Forwards the message to another e-mail address, or multiple e-mail      
+ addresses (separated by commas, no spaces).  The message is then
+ marked to be deleted.  Using Bounce and Leave is the equivalent of the
+ forward command.
+ Usage: bounce address,address2,address3....
+ Example: bounce bob@bozoworld.com,loser@aol.com
+
+CANNED
+  Canned sends a "canned" response (i.e. a form letter) to the sender of
+ the current message.  For more on preparing a canned response and how to
+ use them, see a later section.
+ Usage: canned filename
+ Example: canned standard_acknowledgement
+
+CREATE
+  Create explicitly makes a permanent variable.  See the discussion on
+ variables for more information.  Variables created with "Create", "Pinc"
+ and "Pdec" maintain their values through different mail messages.  Specify 
+ a value for the new variable.  "Create"d variables can be made non-permanent
+ with "zap".
+ Usage: create variable_name value
+ Example: create bob 1
+
+DEC
+  Decrement a variable by 1.  (i.e. subtract 1).  Obviously, this only makes
+ sense for variables that are numbers.  If a variable is set to "2" it will
+ become "1".  If it's "1" it will become "0" and so on.  The opposite of DEC
+ is "inc".  DECing a variable that does not exist will create one and give
+ it the value "-1".  Like INC, "dec" won't create permanent variables, pdec
+ will, though.
+ Usage: dec variable_name 
+ Example: dec bob
+
+DELETE
+  Delete removes the message, preventing it from appearing in your inbox.
+ A delete command will be negated if it is followed by a "leave" or "ignore"
+ command.  If "delete" follows a "leave" or "ignore" command, it will cancel
+ THEM and the message will be deleted.
+ Usage: delete
+
+EXECUTE
+  Runs another program.  The output of the program is captured by the
+ variable "result" and can be used in later expressions. 
+ Usage: execute command_name
+ Example: execute bin/ls
+
+FEED
+  A synonym for "xmessage".
+ Usage: feed program program_arguments...
+ Example: feed /bin/cat
+
+FORWARD
+  Forwards the mail to the given addresses and the message is left in
+ your inbox (unless there was a prior command to delete it).  Using
+ Forward and Leave after each other sets the message to be sent to your
+ inbox.  Using Forward and Delete is the equivalent to using the Bounce
+ command.
+ Usage: forward address,address2,address3....
+ Example: forward bob@bozoworld.com,loser@aol.com
+
+IGNORE
+  Save the message to your inbox.  This command is usually used for clarity,
+ since the message is saved to your inbox by default anyway.  If you follow
+ a "delete" command with an "ignore" or "leave" command, the delete command
+ will be canceled, and the message will be left in your inbox.  If you
+ follow an "Ignore" command or "Leave" command with "delete", the message
+ will be deleted anyway.
+ Usage: ignore
+
+INC
+  Increment a variable by 1.  Obviously, this only makes sense for variables
+ that are numbers.  If the variable is "1" it will go to "2".  If it's "2"
+ it will go to "3" and so on.  The opposite of "inc" is "dec".  INCing a 
+ variable that does not exist will create one and give it the value "1".
+ "Inc" won't create permanent variables (but "Pinc" will).  
+ Usage: inc variable
+ Example: inc bob
+
+KEEP  
+  A synonym for "keepheader" (below)
+ Usage: keep variable1 variable2 ...
+ Example: keep subject from
+
+KEEPHEADER
+  Strips the message header of everything but the variables you
+ specify.  Good for saving space in your inbox, or for trimming the
+ headers before you "post" the message.  A "keepheader" with no
+ arguments at all will zap the entire header.  Keepheader doesn't
+ affect existing variables.
+ Usage: keepheader variable1 variable2
+ Example: keep subject from
+
+LEAVE
+  A synonym for "Ignore"
+ Usage: leave
+
+MAIL 
+  Like "canned", lets you mail a canned response file to a user (a 
+ combination of forward & canned in a sense).  Note that it mails the
+ same canned response file to the same user every time.
+ Usage: mail canned_file email_address
+ Example: mail acknowledgement loser@aol.com
+
+MAILLIST
+  Mails the message to everyone on the list given.  Senders can be
+ added to a list with "addlist" and deleted with "remlist" or via
+ the command line for both adding and deleting. 
+ Usage: maillist listname
+ Example: maillist boating
+
+MODE
+  The mode to leave files in when you're done saving to them.  (this
+ is modified by the umask, which defaults to 0).  Mode is by default
+ 0700.  Prefix the mode with 0 to make it octal, 0x to make it hex.
+ Usage: mode permissions
+ Example: mode 0700
+ 
+NAME
+  "Tags" the message as coming from a name you specify.  This is for
+ people who send you a message, but haven't specified their full name
+ so that all you see is their e-mail address.  This command has purely
+ aesthetic effects.  It only affects mail readers that look to see
+ if a real name is on the "From" line, like PINE and ELM.  It will
+ change an e-mail entry that looks like this:
+ N 3 bingobob@whop.com 12 Bingobob's subject
+ to this:
+ N 3 Dr. Bingobob      12 Bingobob's subject
+ It will also change the existing name if there is one to whatever you
+ specify.  It doesn't affect anything else.  Even the "Name" variable,
+ which contains the real name of the sender (if there is one) isn't
+ changed, so if you want it to be changed, you'll have to set it with
+ the "set" command.
+ Usage: name name_of_person_sending_the_mail
+ Example: name Dr. Bingobob
+
+PASS
+  A synonym for "xcontent".  
+ Usage: pass program program_arguments...
+ Example: pass /bin/cat 
+
+PDEC
+  Like "dec", but creates a permanent variable if one doesn't exist.
+ Usage: pdec variable_name
+ Example: pdec bob
+
+PINC
+  Like "inc", but creates a permanent variable if one doesn't exist.
+ Usage: pinc variable_name
+ Example: pinc bob
+
+PIPE
+  Runs another program (like Execute) and "pipes" the current message to
+ it.  This is wonderful for running the message to other programs that are
+ expecting e-mail, like "mail", the old "filter", "vacation", etc.. 
+ despite the fact that you can usually do what you want with ZFilter.
+ Usage: pipe command_name
+ Example: pipe /bin/filter
+
+PIPECONTENT
+  Runs another program and "pipes" the current message to it (like Pipe) 
+ but only sends the content of the message, not the message headers.  
+ This is good for text-filters, unix commands expecting standard text and
+ other programs along those lines.  Like execute and pipe, whatever the
+ command prints to the screen is stored in the variable "result".
+ Usage: pipecontent command_name
+ Example: pipecontent /bin/cat
+
+POST
+  Tries to post the message to the newsgroup specified.  It removes 
+ extraneous header information, adds Keyword and Summary lines (it
+ tries to make the Keyword line by stripping prepositions, pronouns and
+ articles from the subject line) if they aren't in the message and posts
+ it via Inews.  If Inews isn't configured correctly or you have specified
+ it as being in the wrong place, the posting will fail and whatever you
+ tried to post will disappear into the great void.  Separate multiple
+ newsgroups you wish to post to with commas, no spaces.
+ Usage: post group1,group2,group3,...
+ Example: post alt.test,alt.aol.sucks
+
+PROCESS
+  Reads another rules file and takes actions from it if they apply to the
+ current message.  When done reading the other rules file, processing
+ returns to the command immediately following the "process" command.  You
+ could theoretically have two rules file each set to process each other.
+ That would lock up ZFilter for eternity until it was killed.
+ Usage: process rules_file
+ Example: process secondary.rules
+
+PROTECT
+  A synonym for "mode".
+ Usage: protect permissions
+ Example: protect 0700
+
+PURIFY
+  A synonym for "xheader".  
+ Usage: purify program program_arguments...
+ Example: purify /bin/cat 
+
+REMHEADER
+  Removes the variable from the header of the message received.  This
+ can be used prior to a forward or save if you want to remove private or
+ extraneous information.  Use Keep for better stripping of everything  
+ except what you want.
+ Usage: remheader variable1 variable2 variable3 ....
+ Example: remheader from sender to cc
+
+REMLIST
+  Removes the sender from the mailing list given.  Senders can be added
+ via the command line, or with the command "addlist".  More information
+ is available under the section about "lists"
+ Usage: remlist listname
+ Example: remlist boating
+
+SAVE
+  Save appends the message to a file just as the "savecopy" command does.
+ It then removes it from your inbox.  This is used as a way to keep your
+ inbox clear of potential junk mail, but allows you to review it later.
+ Usage: save filename
+ Example: save Mail/bob
+
+SAVECOPY
+  Savecopy appends the message to a file, usually a message folder such
+ as those used by PINE and ELM.  
+ Usage: savecopy filename
+ Example: savecopy Mail/bob
+
+SAVEOVER
+  Saveover clears the message folder before saving the current message to
+ it.  Good for keeping the latest status update in it's own folder and
+ deleting the old one when a new one comes in.
+ Usage: saveover filename
+ Example: saveover Mail/bob
+
+SET
+  Set a variable to the value specified.  If you "set" a variable that 
+ doesn't exist, a new one will be created with the value specified. You
+ may only create one-word variables, although you may separate multiple
+ words with an underscore (_) for readability.  So don't use "new mail",
+ use "new_mail" instead.
+ PROGRAMMER TYPES: Don't use quotes around the arguments to set unless you
+ want them in the actual value.
+ Usage: set variable value
+ Example: set mail_subj HamsterMan's new mail system
+
+SETHEADER
+  Sets the header variable of the message received to the value specified.
+ If one doesn't exist, it will be created.  This can be used prior to a 
+ forward or save.  If the variable exists already it will be replaced, so
+ if you simply want your header to appear as well (like Received-by lines)
+ you must use Addheader instead
+ Usage: setheader variable value
+ Example: set From The Incredible Dr. Bozo
+
+STOP
+  Stop processing the rule file.  Normally, ZFilter will continue reading the
+ rule file to see if other expressions are true, and taking actions on the
+ ones that are.  Stop will immediately stop processing with whatever has been
+ done so far.  Note that it stops *immediately* and other commands, even ones
+ on the same line, are ignored.
+ Usage: stop
+
+TR
+  A synonym for "xlate".  See below.
+ Usage: tr variable range1 range2
+
+TRANSLATE
+  A synonym for "xlate".  See below.
+ Usage: translate variable range1 range2
+
+UMASK
+  Set the process umask for people who know what umasks are.  To specify
+ an octal number, prefix the number with "0", to specify a hex number, 
+ prefix the number with "0x".  0700 is octal, 0x700 is hex.
+ Usage: umask mask
+ Example: umask 0077
+
+WRITE
+  A synonym for "saveover".
+ Usage: write folder_name
+ Example: write Mail/newfolder
+
+XCONTENT
+  Passes the contents of the message to the program you specify.  Takes
+ the output of the program as the new message body.
+ Usage: xcontent program program_arguments...
+ Example: xcontent /bin/cat new.msg.body
+
+XHEADER
+  Passes the header to the program you specify.  Takes the output of
+ the program as the new header.  NOTE: variables are NOT changed after this
+ action.  You must use "resync" to re-synchronize the variables and the
+ header.
+ Usage: xheader program program_arguments...
+ Example: xheader /bin/cat replace.msg
+
+XLATE
+  Translates all occurences of one set of characters in a variable to a
+ different set.  Xlate takes two sets of characters.  Each is a list.
+ If Xlate sees, for example, the sixth letter in set 1, it will be replaced
+ by the sixth letter in set 2.  For example, you may say 
+ "xlate var 1234 5678".  Xlate would look through the variable "var", and
+ replace all 1s with 5s, all 2s with 6s and so on.  You may specify a
+ range of characters with "-".  This would be another way to do the same
+ thing as above: "xlate var 1-4 5-8".  This turns all uppercase letters
+ into lowercase ones: "xlate var A-Z a-z".
+ Usage: xlate var range1 range2
+ Example: xlate var A-Z a-z
+
+XMESSAGE
+  Passes the message to the program you specify.  Takes the output of 
+ the program as the new message.  As with Xheader, variables are NOT
+ changed after this action.  You must use "resync" to re-synchronize the
+ variables and the header.
+ Usage: xmessage program program_arguments...
+ Example: xmessage /bin/cat replace.mesg
+
+ZAP
+  Make a variable non-permanent.  The variable will still retain it's value
+ for the duration of the message being processed, but will not be defined as
+ anything for the next message.  Use "set variable 0" to delete the variable
+ for the present.
+ Usage: zap variable_name
+ Example: zap bob
+
+--------------------------------------------------------------------------
+4. How do I write form letters?
+
+The "Canned" command will send a form letter (a standard text file) to 
+whoever sent you the last message.  However ZFilter does support a special
+format for messages... you can use curly braces ( { and } ) to refer to
+variables from the messages, or ones that you have "set" or "create"d.  So,
+for example, to refer to the variable "date" (the date the message was sent)
+you would say {date} in the text of the message.  The { and } will be removed
+from the message.  So, this sample form letter:
+
+Dear {name},
+  I was enraptured by your recent mail about {subject}, 
+ so much so, in fact, that I scarcely noticed that it was sent on {date}
+ and had {lines} lines.  Thank you so much!
+					Many Thanks
+					   Bob
+ {signature}
+
+Will end up looking something like this:
+
+Dear Jacob Smith,
+  I was enraptured by your recent mail about interoffice memo 1023
+ so much so, in fact, that I scarcely noticed that it was sent on 18 Jun 1996
+ and had 112 lines.  Thank you so much!
+					Many Thanks
+					   Bob
+ Bob Wesley
+ Acting Department Chairperson: Engineering
+
+
+That's all there is to it!  Other than the {}s, the file used for a canned
+response is an ordinary text file.  If you didn't put {}s in it, everyone
+who got it would get exactly the same thing.  You can use the variable       
+{result} to refer to the output of some previously-run program.
+
+Note: Any spaces inside the {}s will cause ZFilter to ignore it and leave
+it as it stands.  For example:  "{bob's program}" will NOT be replaced
+with the variable.  Which makes sense, since variables can't be longer than
+one word anyway.
+
+--------------------------------------------------------------------------
+5. How do I handle lists?
+
+ZFilter can act as a simple listerver with the appropriate commands and
+rules in the rules file.  For those unfamiliar with mailing lists and
+listservers, a list is simply a list of eMail addresses.  Whenever someone
+on a list sends a message to whoever maintains the list, everyone on the
+list gets a copy of it.  A simple example should suffice... 
+
+bob@wherever.org is keeping a list with five people on it.  They are:
+ dude@somewhere.org
+ mr.big@chicago.mafia.org
+ crack.dealer@aol.com
+ bozo_the_clown@shelter5.homeless.net
+ satan@underworld.mil
+
+Whenever _any_one_ of those five people send a message to bob and indicate
+that they want to use the mailing list, all the other people get a copy of 
+the message (except the person who sent it).  
+
+ZFilter let's you maintain multiple lists.  Each list will have it's own
+name to separate it from the others.  There are three "rules" actions to
+work with, and four command-line options that you can use to maintain
+your lists.  The three actions are 
+
+addlist (to add the sender of the message to the list you specify)
+remlist (to delete the sender of the message from the specified list)
+maillist (to remail the message to the specified list)
+
+Examples are given under the entry for the command in the action-list.
+The (CASE SENSITIVE!) command-line options to zfilter are:
+
+-A list address : add the eMail address given to the list specified
+-D list address : remove the eMail address from the list specified
+-P list         : prints out all the people who are on the list specified
+-W address      : prints all the lists that contain the address specified
+
+So, for example, to add "bob@somewhere.org" to the list "boating", you
+would type (on the command line)
+
+zfilter -A boating bob@somewhere.org
+
+And to remove him from the list "boating", you would type:
+
+zfilter -D boating bob@somewhere.org 
+
+To see who else is on the boating list, you would type:
+
+zfilter -P boating
+
+And to see all the lists bob is on, you would type:
+
+zfilter -W bob@somewhere.org
+
+eMail addresses are NOT case sensitive, but the names of lists are.  So, 
+"boating", "Boating" and "bOAtIng" are three different lists.
+
+For the actions, you can only add or remove the current sender from a list.
+That is, people can't put other people on lists, only themselves.  Using
+the action: 
+
+if ( ... ) addlist boating
+
+is the equivalent of typing 
+
+zfilter -A boating (address or person who sent the letter)
+
+and the same goes for remlist and -D.        
+
+To be helpful, whenever ZFilter gets mail, it checks the various lists
+to see which ones (if any) the sender is on.  It sets a variable called
+"list.name_of_list" for each one it finds.  For example, if the sender
+was on the lists boating, cars and dachsunds, the variables "list.boating",
+"list.cars" and "list.dachsunds" would be created.  You could check for
+this, and take an action like this:
+
+if ( list.boating ) maillist boating
+
+Mostly for unix techies:
+With these commands, you can emulate several of the functions of a full
+listerver like majordomo.  If you created a mail alias for a user, say-
+boating@yourhost.domain you could add a line like this to your rules file:
+
+if( to = "boating@yourhost.domain" & list.boating ) maillist boating
+if( to = "listserv@yourhost.domain" & subject ? "join boating" ) 
+addlist boating
+if( to = "listserv@yourhost.domain" & subject ? "quit boating" ) 
+remlist boating
+
+Which (assuming "listserv@yourhost.domain" is also aliased) would add a 
+user to the boating list if they have the words "join boating" in the
+subject of the letter, remove the user if they have the words "quit boating"
+in the subject of the letter, or mail the letter out to the boating list
+if the letter was mailed to the list.
+
+You can easily do file-requests:
+
+if( subject ? "send help.txt" ) canned help.txt
+
+ZFilter was never meant to replace full-featured listservs like majordomo,
+but (with a lot of rules and some external programs) can be forced to act
+like one.  Use at your own risk.  ZFilter uses DBM files to maintain lists
+for quick checking and removal.  Maybe in the future, if requested, ZFilter  
+will have more listserver applications.  The majordifference at the moment
+(ha ha) is that for each list, you have to add the three or so lines for
+it manually, and that ZFilter doesn't parse the subject line and content 
+looking for stuff it understands.
+
+One application of these functions is to start a list for people who
+junk-mail you and won't stop.  You can add them from the command line
+with -A, and then do something like this:
+
+if( list.junk_mailers ) maillist junk_maillers; delete
+
+which will keep all the junk mailers mailing each other, and delete them
+from your inbox!  As Tai-Chi teaches, use the force of your opponents 
+against them.  :) 
+
+NOTE: All folders MUST be given _single_word_ names for now.
+
+--------------------------------------------------------------------------
+6. How can I change the default settings?
+
+Some of the default settings, like the rules file, the subject line for
+messages being forwarded or canned messages, the default logging file,
+and the location of your inbox can all be set using ZFilter's configuration
+mode.  Invoke it by typing "zfilter -C" (capital c).  It will prompt you
+for all of the above information.
+
+Normally, the defaults information is stored in a file called ".zfdefaults"
+in your home directory.  If a file named that exists, or you would prefer
+that it use a different file name, you may use the "-F" option to change
+it (see a later section about changing options).
+
+--------------------------------------------------------------------------
+7. How can I change the default files, see summaries, logs, rules, etc..?
+
+ZFilter supports a range of command-line options.  Here's the list and what
+they do.  If you wonder why some of the option letters are a bit odd, I
+tried to keep as many of them as possible the same as the ones the old
+filter program used.  Blame the guy who did the old filter, not me.
+
+ -A list email	- Add email address specified to list specified
+ -C 		- Engage Config Mode, prompt for default settings for most
+		  files.
+ -c		- Clear the log file.  Log files will be summarized and
+		  condensed so that your running-totals and summaries won't
+		  be affected.
+ -D list email	- Remove email address specified from the list specified
+ -f filename	- Use the specified rules file.
+ -F filename	- Use the specified defaults file.
+ -i 		- Ignore "reply-to" field of the message, and use the
+		  address the message came from for the "canned" command.
+ -l		- Actions-only (don't log the sender and subject)
+ -L directory	- Use the specified directory to store logs
+ -n		- Not-really, display the logs to the screen and take no
+		  actions.
+ -o filename	- redirect where verbose messages are printed to.
+ -p filename 	- Use the specified file to hold the permanent variables
+		  (normally ".zfprmnt" in your home directory)
+ -P list	- Display all the eMail addresses in the list specified
+ -q		- "Quiet" mode.  Don't print to the logs. 
+ -r		- View the rules file
+ -s		- Display a summary of actions taken and who mail came from.
+ -S		- View the log file.
+ -t filename	- Use the specified file for temporary information
+ -u 		- Usage.  Display a summary of command-line arguments
+ -v		- Verbose- print logs to the screen or specified place.
+		  change where messages are printed to with -o.  Logging
+		  to the log file is unchanged.
+ -V		- Print the version and release date of your copy of ZFilter
+ -W address	- Display all lists that contain the address specified
+ -x		- Completely reset the summary data
+ -X		- Completely reset _everything_, including all permanent
+		  variables.
+
+ -? -H -h /?    - All print usage help.  Like -u
+ 
+NOTE: When the description mentions the 'specified file', place the file
+ name after the option like this:
+ 
+zfilter -p .myzfprmnt -F .myzfdflt
+
+to set the "permanent" file to ".myzfprmnt" and the "defaults" file
+to ".myzfdflt".
+
+ZFilter ignores any arguments it doesn't understand.
+
+--------------------------------------------------------------------------
+8. Miscellanious
+
+- Normally, ZFilter logs it's actions to a file called "filter-log". 
+ You may change this in the course of processing by changing the
+ variable 'log_file' to reflect the new file to log to.  This is useful
+ for logging certain mail to a different file for whatever purposes you
+ may intend it.
+
+- The variable "base_dir" is a shortcut that refers to the default
+ directory for files that don't start with "/".  For example, if    
+ base_dir is set to "/var/home/bob" and you change the log file from
+ "filter-log" to "myfilter.log", the full path for "myfilter.log" 
+ will be "/var/home/bob/myfilter.log".  If you wanted to log to
+ "myfilter.log" in the root directory, you would need to change it
+ to "/myfilter.log".  By default, base_dir is set to your home directory.
+
+- To prevent "mail-loops" of two filters e-mailing each other, ZFilter
+ adds the header "X-Filtered-By" to the message, and will not respond to
+ any message containing an "X-Filtered-By" in the message header.  Just
+ to be paranoid, ZFilter will also not respond to any message containing
+ the words "automated", "filter" or "server" in the subject line.  You
+ (or whoever maintains the source for ZFilter) can easily change this by
+ editing the first few lines of the source (the part to change is
+ clearly marked)
+
+- Your inbox is (by default) /var/mail/YOUR_LOGIN_NAME .  Don't change
+ it in the defaults file unless you are sure what it is.  Consult a 
+ Unix techie if you don't know.
+
+- As a special shortcut, actions that appear in the rules file prior
+ to any "if" statements are taken for every e-mail letter (as if the
+ first line had been an "if (always)" )
+
+- You may imbed comments in your rules file.  Any line starting with the
+ "#" character will be ignored.
+
+- When configuring ZFilter, you may define a "local host".  This is 
+ appended to all mail that arrives from your local machine.  (ie mail
+ from "bob" or "jim" NOT "bob@bozoland.com").  You will probably only
+ need this if mail sent to just "bob" doesn't work correctly.
+
+- When configuring ZFilter, it will ask what the "chain_threshold"
+ should be.  This is the number of times a letter should look like it
+ has been forwarded before being flagged a "chain" letter.
+
+- Unix Hacks: the "?" and "#" operators do a perl regex on the variable
+ they work on.  "?" does an insensitive "/whatever/i" and "#" does it
+ without the "i".  SOO... you can put any regex perl stuff in it you 
+ like, say  if( bob ? ^foo$ ) to match "foo" only case-insensitive.  
+
+- CAVEAT! 
+ Using ANY of these options on ZFilter's invocation line will cause
+ ZFilter to quit without actually processing a message:
+  -A -C -c -D -L -P -r -s -S -u -V -x -X
+ All of these options are for managing files, or setting up ZFilter.
+ They are meant to be run by calling zfilter directly, like this:
+  
+ zfilter -C -x -X
+
+ And will cause all your mail to dissapear if you use them in your 
+ .forward file.
+
+--------------------------------------------------------------------------
+9. Examples:
+
+TASK: I would like to acknowledge all e-mail received with a form letter.
+ I would also like all mail coming from harry@somewhere.outhere.com to
+ be saved to a folder called "harry".  The form letter is saved as a file
+ called "ack".
+
+The rules file would look like this:
+
+canned ack
+if ( sender ? "harry@somewhere.outhere.com" ) save Mail/harry 
+
+Or alternately (for the picky)
+
+if (always) canned ack 
+if ( sender ? "harry@somewhere.outhere.com" ) save Mail/harry
+
+Or for people using the alternate form ( *sigh* )
+
+if always then canned ack
+if sender ? "harry@somewhere.outhere.com" then save Mail/harry
+
+TASK: I would like all incoming mail backed-up to a file called "received"
+ I want all mail that mentions the phrase "I need help" in the text of
+ the message to be mailed the file "help-response".  If the subject of
+ the letter contains the word "meeting", send the canned response file
+ "vacation" and delete the letter.
+
+Here is the rules file:
+
+savecopy Mail/received
+if ( content ? "I need help" ) canned help-response
+if ( subject ? "meeting" ) canned vacation; delete
+
+NOTE: Mail containing the word "meeting" in the subject line AND the
+ phrase "I need help" in the content of the message, it would generate
+ the response file "help-response", AND get the canned message "vacation"
+ (that's two messages) and be deleted.
+
+TASK: I have moved to another e-mail address.  I was previously 
+ loser@aol.com   and now I'm   I_have_a_life_now@somewhere.else .  I would
+ like all mail at loser@aol.com to be forwarded to my new address, and
+ anyone sending mail to loser@... should get a response that I've moved.
+ (assuming AOL would let you get a shell account.. :) )
+
+Here is the rules file for loser@aol.com
+ 
+forward I_have_a_life_now@somewhere.else; canned Ive_moved
+
+One line!  Easy, huh?  Just make sure the file "Ive_moved" exists.
+
+--------------------------------------------------------------------------
+10. How does ZFilter compare to other filter programs?
+
+I only know of three other programs that try to filter mail, so I'm sorry
+if I don't compare it to your favorite one.  Perhaps you can compare it
+yourself and tell me what you think?  I'd love to know... my eMail address
+is at the top and bottom of this README.
+
+The other progams I know of are: "filter", "mailagent" and "procmail".
+Here's how I think I stack up against them:
+
+filter: ZFilter was intended to replace filter.  I hated that program.  :)
+	The old filter was clunky, and had an atrocious man page.  
+	ZFilter's action set is a superset of the old filter's.  Any thing
+	the old filter could do, ZFilter can do, and probably better.
+	ZFilter is written in PERL and is more customizable than filter,
+	which is written in C.  ZFilter can take as many actions as you
+	like to any expression.  Filter would let you take one.
+
+procmail: Procmail places more emphasis on reliability and delivering mail
+	under miserable conditions.  ZFilter works best when the operating
+	system isn't overloaded, the file system has enough space to hold
+	incoming mail, etc..  ZFilter is heading in the direction of 
+	better reliability, but for the moment, new features are a higher 
+	priority than delivering mail under very adverse conditions.
+	ZFilter offers many more actions, and abilities.
+
+mailagent: I like mailagent.  If I had known about mailagent when I first
+	tried to find a better filter, I might never have written ZFilter.
+	ZFilter differs in several ways.  First, the rules file for
+ 	Mailagent follows a lex style, ZFilter's is more like a shorthand
+	C style that should be easily grokked by C and PASCAL programmers.
+	It also accepts old BASIC style rules.  I hope this makes ZFilter
+	easy to use for beginners and people unfamiliar to programming and
+	the UNIX environment.
+
+	Mailagent comes with a separate configuration program.  ZFilter's
+	config mode is internal.
+
+	Mailagent can run as a daemon process and work on an existing
+	mail queue and mail folders.  ZFilter only deals with mail as it
+	comes in.
+
+ 	Both are written in perl, although mailagent comes with C source.
+	ZFilter is tiny.  Mailagent's package is nearly 500k gzipped and
+	has over 20 directories.  ZFilter takes up about 30k gzipped
+	and contains only two files.  
+
+	Both programs probably have much different styles of displaying
+	summaries, but I've never seen mailagent's, so I don't know what
+	the differences are specifically.
+
+	Mailagent doesn't have commands for adding/removing people from
+	lists per se, but has a server to process message bodies for
+	commands.  ZFilter can search message bodies for whatever you
+	like, but is much clunkier than Mailagent about it.
+	Mailagent doesn't have commands for dealing with counters and
+	permanent variables.
+
+	There are numerous subtle differences and minor features in both
+	programs that are not supported in the other.  I haven't made a
+	serious effort to catalog these, but they will become apparent
+	over time to anyone who switches.  If there is a feature of any
+	other program that you especially like and would like to see
+	in ZFilter, please eMail me and I'll see what I can do.  
+
+	Here is a short Mailagent <-> Zfilter command set showing what
+	command equivalents are.  ZFilter does not go into different
+	"states" during message processing, nor does it act as a daemon
+	process, so some of Mailagent's commands are not applicable to
+	ZFilter.  They are marked with n/a and a comment is made for them.
+
+	There are often command aliases/synonyms to let you use Mailagent
+	commands in ZFilter if you came from that background.  They are 
+	in parentheses under the command name.
+	Items marked with a "-" are not directly supported.
+	ZFilter and Mailagent treat the output of commands differently.
+	Mailagent mails it to the owner of the program, ZFilter stores it
+	in a variable called "result" and it is lost unless you explicitly 
+	do something with it.
+
+	Mailagent	Zfilter		Notes
+	-----------------------------------------------------------------
+	-		addlist		Add to list.  Can be emulated in 
+					Mailagent by server commands in
+					the message body if present.
+	annotate	addheader	
+			(or annotate)	
+	after		-		Runs a process after (x) time
+	apply		process		
+	assign		set
+	back		run + take	Runs a program & takes actions
+				     	based on it's output
+	beep		-		Controls how you are beeped when
+					you have new mail
+	begin		n/a		Enters a new state
+	biff		-		Enable/Disable notifying the user
+					when s/he has new mail.
+	bounce		bounce
+	-		create
+	do		-  		Calls an internal PERL routine.
+	-		dec
+	delete		delete
+	feed		xmessage
+			(or feed)
+	forward		forward		
+	give		pipecontent
+	-		inc	
+	leave		leave/ignore	
+	-		maillist	see "addlist"
+	macro		-		Lets you create a macro
+	message		canned
+	-		name
+	nop		(leave empty)	No-operation.  To not take an
+					action to an "if" statement, 
+					simply do not put one after it.
+	notify		mail
+	once		(default)	Only take the command once
+	pass		xcontent
+			(or pass)
+	-		pdec
+	-		pinc
+	pipe		pipe
+	post		post
+	process		n/a		Process and execute Mailagent
+					commands.
+	protect		mode
+			(or protect)
+	purify		xheader
+			(or purify)
+	-		remlist		See "addlist"
+	queue		n/a		Re-Queue the message to process
+					later.
+	record		n/a		Record message, switch to SEEN
+					mode if it has been recorded before.
+	reject		-		Abort the current action and
+					reset to default action.
+	require		-		Load in a perl file
+	restart		-		Restart rule file
+	resync		resync
+	run 		execute
+			(or run)
+	save		save
+	select		-		Execute command only within (x)
+					time period.
+	server		n/a		Treat message body as server
+					commands.
+	split		-		Split up the message into several
+	store		savecopy	
+	strip		remheader
+	subst		xlate
+	tr		xlate
+	umask		umask		Changes process's umask
+	unique		-		Save message only if it is unique
+	vacation	set,canned	Turns vacation mode on and off
+					(when on, tells people who write
+					to you that you're on vaction)
+	write		saveover	
+	-		zap
+	
+--------------------------------------------------------------------------
+11. Modification history
+
+ver, 2.3: Added xheader, xcontent, xmessage, resync, umask and mode
+	  Bugfixes for all the 2.2 commands.  :)
+ver. 2.2: Added bounce, xlate, addheader, remheader, setheader, take
+	  keepheader, post, process, saveover and "bounce" as a separate
+	  command.  Bugfixes.
+ver. 2.1: ZFilter no longer cares whether "filter" is in the subject
+	  line of forwarded or canned messages.  It now plays with the
+	  message headers to identify the message as having been filtered.
+	  It still doesn't respond to messages with the word "filter" in
+	  the subject line for backward-compatibility and common sense.
+	  Bugfix to saving mail to a folder that should _hopefully_ clear
+	  up any wierd problems with "phantom mail" that messes with the
+	  minds of "You have new mail" alarms.  You might have either  
+	  gotten "You have new mail" messages when you didn't, or not
+	  gotten any messages when you did.
+ver. 2.0: Added minor listserv functions.  ZFilter can now add and
+	  delete email addresses from lists, both "on-the-fly" in a
+	  rules file and from the command line.  Also supports displaying
+	  lists from the command line and searching lists for a user.
+	  Added -u for syntax help.  Added -? -h -H and /? as synonyms
+	  for -u just in case.  Did I mention I'm paranoid? :)
+ver. 1.9: Minor bugfix for log-clearing.  Added "bounce" as a synonym
+	  for "forward".  Added the "name" command.  ZFilter now sets
+	  the status of all the messages it parses to "N" (so that if
+	  you save to a folder, your messages still are flagged as being
+	  new).
+ver. 1.8: Clear logs becomes "summarize and clear logs".  Zfilter now
+	  uses DBM files to summarize old logs before deleting them.
+	  The end result uses about 1/3 the disk space of keeping large
+	  logs around.  Summaries are not affected if you tell Zfilter
+	  to clear the logs any more since old summaries are stored.
+	  Also added command-line options to completely reset the logs
+	  and the summaries.
+ver. 1.6: Scrapped the old expression parser and did a new one.
+	  It's tighter, won't allow "or" and "and" instead of (| and &)
+	  BUT it will take sub-expressions in parentheses, and it fixed
+          one or two bugs in the old one dealing with "never" and "always"
+	  (so embarrasing too... they were supposed to be easy!)
+	  And it's marginally more idiot-proof.  BIG CHANGE: The parser
+	  allows you to compare variables like this: "if ( a > b ) ..."
+	  which can be nice, BUT it also means that when you do a 
+	  regex search ( like when you use ? or # in an "if" statement)
+	  you MUST put quotes around text you want to find if it isn't
+	  another variable.  Like so:
+
+	  if( a ? b ) ...     - Searches to see if the contents of variable
+				"b" appear in variable "a".
+	  if( a ? "b" ) ...   - Searches to see if the letter "b" appears
+				in the variable "a".
+ver. 1.41: Precious little.  Bugfix, added "chain-detection".
+prior to ver. 1.41: Whatever I did is lost to history...
+
+----
+(C) 1996, 1997 Steve Zeck (viper@kuentos.guam.net)
+Free software, anyone may modify and re-distribute as much as they wish
+without express consent from me as long as I am still attributed in the
+source as the original author and the notice at the beginning of the 
+script is left unchanged.  Modifiers must also put their eMail address
+in the source for Zfilter in the place reserved for that purpose.
